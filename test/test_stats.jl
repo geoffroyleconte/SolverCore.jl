@@ -63,11 +63,12 @@ function test_stats()
   end
 
   @testset "Testing Dummy Solver with multi-precision" begin
+    solver = DummySolver()
     for T in (Float16, Float32, Float64, BigFloat)
       nlp = ADNLPModel(x->dot(x, x), ones(T, 2))
 
       with_logger(NullLogger()) do
-        stats = dummy_solver(nlp)
+        stats = solver(nlp)
       end
       @test typeof(stats.objective) == T
       @test typeof(stats.dual_feas) == T
@@ -80,7 +81,7 @@ function test_stats()
       nlp = ADNLPModel(x->dot(x, x), ones(T, 2), x->[sum(x)-1], [0.0], [0.0])
 
       with_logger(NullLogger()) do
-        stats = dummy_solver(nlp)
+        stats = solver(nlp)
       end
       @test typeof(stats.objective) == T
       @test typeof(stats.dual_feas) == T
