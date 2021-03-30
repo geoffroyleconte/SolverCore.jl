@@ -9,17 +9,26 @@ mutable struct DummySolver{T} <: AbstractSolver{T}
   ct :: Vector{T}
 end
 
-function DummySolver(::Type{T}, nvar :: Integer, ncon :: Integer = 0) where T
+function DummySolver(::Type{T}, meta :: AbstractNLPModelMeta) where T
+  nvar, ncon = meta.nvar, meta.ncon
   DummySolver{T}(true, zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, ncon), zeros(T, ncon), zeros(T, ncon))
 end
 
+function DummySolver(::Type{T}, ::Val{:nosolve}, nlp :: AbstractNLPModel) where T
+  solver = DummySolver(T, nlp.meta)
+  return solver
+end
+
 function DummySolver(::Type{T}, nlp :: AbstractNLPModel) where T
-  solver = DummySolver(T, nlp.meta.nvar, nlp.meta.ncon)
+  solver = DummySolver(T, nlp.meta)
   output = solve!(solver, nlp)
   return output, solver
 end
 
-DummySolver(args...) = DummySolver(Float64, args...)
+DummySolver(meta :: AbstractNLPModelMeta) = DummySolver(Float64, meta :: AbstractNLPModelMeta)
+DummySolver(::Val{:nosolve}, nlp :: AbstractNLPModel) = DummySolver(Float64, Val(:nosolve), nlp :: AbstractNLPModel)
+DummySolver(nlp :: AbstractNLPModel) = DummySolver(Float64, nlp :: AbstractNLPModel)
+
 
 function solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   x :: AbstractVector{T} = T.(nlp.meta.x0),

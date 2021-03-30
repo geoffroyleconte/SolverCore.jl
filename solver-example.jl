@@ -10,15 +10,15 @@ nlp = ADNLPModel(
   [0.0],
   [0.0]
 )
-solver = DummySolver(Float16, 2, 1)
+solver = DummySolver(Float16, nlp.meta)
 output = solve!(solver, nlp, δ = 1e-2)
 
 #%%
 include("test/dummy_solver.jl")
-solver = DummySolver(2, 1)
+solver = DummySolver(Val(:nosolve), nlp)
 output = solve!(solver, nlp, δ = 1e-2)
 @allocated output = solve!(solver, nlp, δ = 1e-2)
-#%%
 
+#%%
 include("test/dummy_solver.jl")
 output, solver = DummySolver(nlp)
