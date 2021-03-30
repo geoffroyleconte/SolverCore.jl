@@ -1,33 +1,35 @@
-mutable struct DummySolver <: AbstractSolver
+mutable struct DummySolver{T} <: AbstractSolver{T}
   initialized :: Bool
-  x :: Vector
-  xt :: Vector
-  gx :: Vector
-  dual :: Vector
-  y :: Vector
-  cx :: Vector
-  ct :: Vector
+  x :: Vector{T}
+  xt :: Vector{T}
+  gx :: Vector{T}
+  dual :: Vector{T}
+  y :: Vector{T}
+  cx :: Vector{T}
+  ct :: Vector{T}
 end
 
-function DummySolver(nvar :: Integer, ncon :: Integer = 0)
-  DummySolver(true, zeros(nvar), zeros(nvar), zeros(nvar), zeros(nvar), zeros(ncon), zeros(ncon), zeros(ncon))
+function DummySolver(::Type{T}, nvar :: Integer, ncon :: Integer = 0) where T
+  DummySolver{T}(true, zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, ncon), zeros(T, ncon), zeros(T, ncon))
 end
 
-function DummySolver(nlp :: AbstractNLPModel)
-  solver = DummySolver(nlp.meta.nvar, nlp.meta.ncon)
+function DummySolver(::Type{T}, nlp :: AbstractNLPModel) where T
+  solver = DummySolver(T, nlp.meta.nvar, nlp.meta.ncon)
   output = solve!(solver, nlp)
   return output, solver
 end
 
-function solve!(solver::DummySolver, nlp :: AbstractNLPModel;
-  x :: AbstractVector = nlp.meta.x0,
-  atol :: Real = sqrt(eps(eltype(x))),
-  rtol :: Real = sqrt(eps(eltype(x))),
+DummySolver(args...) = DummySolver(Float64, args...)
+
+function solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
+  x :: AbstractVector{T} = T.(nlp.meta.x0),
+  atol :: Real = sqrt(eps(T)),
+  rtol :: Real = sqrt(eps(T)),
   max_eval :: Int = 1000,
   max_time :: Float64 = 30.0,
   α :: Float64 = 1e-2,
   δ :: Float64 = 1e-8,
-)
+) where T
   solver.initialized || error("Solver not initialized.")
   nvar, ncon = nlp.meta.nvar, nlp.meta.ncon
 
@@ -35,8 +37,6 @@ function solve!(solver::DummySolver, nlp :: AbstractNLPModel;
   elapsed_time = 0.0
   solver.x .= x # Copy values
   x = solver.x  # Change reference
-
-  T = eltype(x)
 
   cx = solver.cx .= ncon > 0 ? cons(nlp, x) : zeros(T, 0)
   ct = solver.ct = zeros(T, ncon)
@@ -124,15 +124,15 @@ function solve!(solver::DummySolver, nlp :: AbstractNLPModel;
   )
 end
 
-parameters(::DummySolver) = NamedTuple(α = 1e-2, δ = 1e-8)
+# parameters(::DummySolver) = NamedTuple(α = 1e-2, δ = 1e-8)
 
-parameter_problem(solver::DummySolver, problems, cost) = ADNLPModel(
-  x -> begin
-    for nlp in problems
-      try
-        output = with_logger(NullLogger()) do
-          output, solver = DummySolver()
-        end
-    end
-  end
-)
+# parameter_problem(solver::DummySolver, problems, cost) = ADNLPModel(
+#   x -> begin
+#     for nlp in problems
+#       try
+#         output = with_logger(NullLogger()) do
+#           output, solver = DummySolver()
+#         end
+#     end
+#   end
+# )

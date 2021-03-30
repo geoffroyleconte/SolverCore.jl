@@ -5,7 +5,7 @@ export AbstractSolver
 
 Base type for JSO-compliant solvers.
 """
-abstract type AbstractSolver end
+abstract type AbstractSolver{T} end
 
 """
     output = solve!(solver, problem)

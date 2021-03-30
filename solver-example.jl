@@ -10,7 +10,7 @@ nlp = ADNLPModel(
   [0.0],
   [0.0]
 )
-solver = DummySolver(2, 1)
+solver = DummySolver(Float16, 2, 1)
 output = solve!(solver, nlp, δ = 1e-2)
 
 #%%
