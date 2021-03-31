@@ -30,7 +30,7 @@ DummySolver(::Val{:nosolve}, nlp :: AbstractNLPModel) = DummySolver(Float64, Val
 DummySolver(nlp :: AbstractNLPModel) = DummySolver(Float64, nlp :: AbstractNLPModel)
 
 
-function solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
+function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   x :: AbstractVector{T} = T.(nlp.meta.x0),
   atol :: Real = sqrt(eps(T)),
   rtol :: Real = sqrt(eps(T)),
@@ -133,15 +133,9 @@ function solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   )
 end
 
-# parameters(::DummySolver) = NamedTuple(α = 1e-2, δ = 1e-8)
-
-# parameter_problem(solver::DummySolver, problems, cost) = ADNLPModel(
-#   x -> begin
-#     for nlp in problems
-#       try
-#         output = with_logger(NullLogger()) do
-#           output, solver = DummySolver()
-#         end
-#     end
-#   end
-# )
+function SolverCore.parameters(::Type{DummySolver{T}}) where T
+  (
+    α = (default=T(1e-2), type=:log, min=zero(T), max=one(T)),
+    δ = (default=√eps(T), type=:log, min=zero(T), max=one(T)),
+  )
+end
