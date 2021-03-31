@@ -1,5 +1,6 @@
 mutable struct DummySolver{T} <: AbstractSolver{T}
   initialized :: Bool
+  params :: Dict
   x :: Vector{T}
   xt :: Vector{T}
   gx :: Vector{T}
@@ -9,9 +10,31 @@ mutable struct DummySolver{T} <: AbstractSolver{T}
   ct :: Vector{T}
 end
 
-function DummySolver(::Type{T}, meta :: AbstractNLPModelMeta) where T
+function SolverCore.parameters(::Type{DummySolver{T}}) where T
+  (
+    α = (default=T(1e-2), type=:log, min=√√eps(T), max=one(T) / 2),
+    δ = (default=√eps(T), type=:log, min=√eps(T), max=√√√eps(T)),
+    reboot_y = (default=false, type=:bool)
+  )
+end
+
+function DummySolver(::Type{T}, meta :: AbstractNLPModelMeta; kwargs...) where T
   nvar, ncon = meta.nvar, meta.ncon
-  DummySolver{T}(true, zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, nvar), zeros(T, ncon), zeros(T, ncon), zeros(T, ncon))
+  params = parameters(DummySolver{T})
+  solver = DummySolver{T}(true,
+    Dict(k => v[:default] for (k,v) in pairs(params)),
+    zeros(T, nvar),
+    zeros(T, nvar),
+    zeros(T, nvar),
+    zeros(T, nvar),
+    zeros(T, ncon),
+    zeros(T, ncon),
+    zeros(T, ncon),
+  )
+  for (k,v) in kwargs
+    solver.params[k] = v
+  end
+  solver
 end
 
 function DummySolver(::Type{T}, ::Val{:nosolve}, nlp :: AbstractNLPModel) where T
@@ -36,11 +59,16 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   rtol :: Real = sqrt(eps(T)),
   max_eval :: Int = 1000,
   max_time :: Float64 = 30.0,
-  α :: Float64 = 1e-2,
-  δ :: Float64 = 1e-8,
+  kwargs...
 ) where T
   solver.initialized || error("Solver not initialized.")
   nvar, ncon = nlp.meta.nvar, nlp.meta.ncon
+  for (k,v) in kwargs
+    solver.params[k] = v
+  end
+  α = solver.params[:α]
+  δ = solver.params[:δ]
+  reboot_y = solver.params[:reboot_y]
 
   start_time = time()
   elapsed_time = 0.0
@@ -95,11 +123,16 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     end
 
     x .= xt
-    y .+= t * Δy
+
 
     fx = ft
     grad!(nlp, x, gx)
     Jx = ncon > 0 ? jac(nlp, x) : zeros(T, 0, nvar)
+    if reboot_y
+      y .= -Jx' \ gx
+    else
+      y .+= t * Δy
+    end
     cx .= ct
     dual .= gx .+ Jx' * y
     elapsed_time = time() - start_time
@@ -130,12 +163,5 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     elapsed_time=elapsed_time,
     solution=x,
     iter=iter
-  )
-end
-
-function SolverCore.parameters(::Type{DummySolver{T}}) where T
-  (
-    α = (default=T(1e-2), type=:log, min=zero(T), max=one(T)),
-    δ = (default=√eps(T), type=:log, min=zero(T), max=one(T)),
   )
 end
