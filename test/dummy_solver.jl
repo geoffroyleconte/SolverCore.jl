@@ -1,57 +1,39 @@
 mutable struct DummySolver{T} <: AbstractSolver{T}
   initialized :: Bool
   params :: Dict
-  x :: Vector{T}
-  xt :: Vector{T}
-  gx :: Vector{T}
-  dual :: Vector{T}
-  y :: Vector{T}
-  cx :: Vector{T}
-  ct :: Vector{T}
+  workspace
 end
 
 function SolverCore.parameters(::Type{DummySolver{T}}) where T
   (
     α = (default=T(1e-2), type=:log, min=√√eps(T), max=one(T) / 2),
     δ = (default=√eps(T), type=:log, min=√eps(T), max=√√√eps(T)),
-    reboot_y = (default=false, type=:bool)
+    reboot_y = (default=false, type=:bool),
   )
 end
+
+# function for validating given parameters. Instead of using constraints.
 
 function DummySolver(::Type{T}, meta :: AbstractNLPModelMeta; kwargs...) where T
   nvar, ncon = meta.nvar, meta.ncon
   params = parameters(DummySolver{T})
   solver = DummySolver{T}(true,
     Dict(k => v[:default] for (k,v) in pairs(params)),
-    zeros(T, nvar),
-    zeros(T, nvar),
-    zeros(T, nvar),
-    zeros(T, nvar),
-    zeros(T, ncon),
-    zeros(T, ncon),
-    zeros(T, ncon),
+    ( # workspace
+      x    = zeros(T, nvar),
+      xt   = zeros(T, nvar),
+      gx   = zeros(T, nvar),
+      dual = zeros(T, nvar),
+      y    = zeros(T, ncon),
+      cx   = zeros(T, ncon),
+      ct   = zeros(T, ncon),
+    )
   )
   for (k,v) in kwargs
     solver.params[k] = v
   end
   solver
 end
-
-function DummySolver(::Type{T}, ::Val{:nosolve}, nlp :: AbstractNLPModel) where T
-  solver = DummySolver(T, nlp.meta)
-  return solver
-end
-
-function DummySolver(::Type{T}, nlp :: AbstractNLPModel) where T
-  solver = DummySolver(T, nlp.meta)
-  output = solve!(solver, nlp)
-  return output, solver
-end
-
-DummySolver(meta :: AbstractNLPModelMeta) = DummySolver(Float64, meta :: AbstractNLPModelMeta)
-DummySolver(::Val{:nosolve}, nlp :: AbstractNLPModel) = DummySolver(Float64, Val(:nosolve), nlp :: AbstractNLPModel)
-DummySolver(nlp :: AbstractNLPModel) = DummySolver(Float64, nlp :: AbstractNLPModel)
-
 
 function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   x :: AbstractVector{T} = T.(nlp.meta.x0),
@@ -61,6 +43,7 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   max_time :: Float64 = 30.0,
   kwargs...
 ) where T
+  # Check dim
   solver.initialized || error("Solver not initialized.")
   nvar, ncon = nlp.meta.nvar, nlp.meta.ncon
   for (k,v) in kwargs
@@ -72,18 +55,18 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
 
   start_time = time()
   elapsed_time = 0.0
-  solver.x .= x # Copy values
-  x = solver.x  # Change reference
+  solver.workspace.x .= x # Copy values
+  x = solver.workspace.x  # Change reference
 
-  cx = solver.cx .= ncon > 0 ? cons(nlp, x) : zeros(T, 0)
-  ct = solver.ct = zeros(T, ncon)
-  grad!(nlp, x, solver.gx)
-  gx = solver.gx
+  cx = solver.workspace.cx .= ncon > 0 ? cons(nlp, x) : zeros(T, 0)
+  ct = solver.workspace.ct = zeros(T, ncon)
+  grad!(nlp, x, solver.workspace.gx)
+  gx = solver.workspace.gx
   Jx = ncon > 0 ? jac(nlp, x) : zeros(T, 0, nvar)
-  y = solver.y .= -Jx' \ gx
+  y = solver.workspace.y .= -Jx' \ gx
   Hxy = ncon > 0 ? hess(nlp, x, y) : hess(nlp, x)
 
-  dual = solver.dual .= gx .+ Jx' * y
+  dual = solver.workspace.dual .= gx .+ Jx' * y
 
   iter = 0
 
@@ -106,7 +89,7 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
 
     AΔx = Jx * Δx
     ϕx = ϕ(fx, cx, y)
-    xt = solver.xt .= x + Δx
+    xt = solver.workspace.xt .= x + Δx
     if ncon > 0
       cons!(nlp, xt, ct)
     end
@@ -123,7 +106,6 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     end
 
     x .= xt
-
 
     fx = ft
     grad!(nlp, x, gx)

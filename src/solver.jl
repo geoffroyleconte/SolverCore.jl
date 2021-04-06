@@ -4,6 +4,10 @@ export AbstractSolver, solve!, parameters
     AbstractSolver
 
 Base type for JSO-compliant solvers.
+A solver must have three members:
+- `initialized :: Bool`, indicating whether the solver was initialized
+- `params :: Dict`, a dictionary of solvers
+- `workspace`, a named tuple with arrays used by the solver.
 """
 abstract type AbstractSolver{T} end
 
@@ -15,9 +19,8 @@ end
     output = solve!(solver, problem)
 
 Solve `problem` with `solver`.
-This modifies internal
 """
-function solve!(::AbstractSolver, ::AbstractNLPModel) end
+function solve!(::AbstractSolver, ::Any) end
 
 """
     named_tuple = parameters(solver)
@@ -41,3 +44,8 @@ function parameters(::Type{AbstractSolver{T}}) where T end
 
 parameters(::Type{S}) where S <: AbstractSolver = parameters(S{Float64})
 parameters(solver :: AbstractSolver) = parameters(typeof(solver))
+
+# To be removed in the future
+
+include("optsolver.jl")
+# include("linearsolver.jl")
