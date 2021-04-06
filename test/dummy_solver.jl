@@ -1,4 +1,4 @@
-mutable struct DummySolver{T} <: AbstractSolver{T}
+mutable struct DummySolver{T} <: AbstractOptSolver{T}
   initialized :: Bool
   params :: Dict
   workspace
@@ -59,7 +59,7 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
   x = solver.workspace.x  # Change reference
 
   cx = solver.workspace.cx .= ncon > 0 ? cons(nlp, x) : zeros(T, 0)
-  ct = solver.workspace.ct = zeros(T, ncon)
+  ct = solver.workspace.ct .= zero(T)
   grad!(nlp, x, solver.workspace.gx)
   gx = solver.workspace.gx
   Jx = ncon > 0 ? jac(nlp, x) : zeros(T, 0, nvar)
@@ -133,8 +133,9 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     :max_eval
   end
 
-  return GenericExecutionStats(
+  return OptSolverOutput(
     status,
+    x,
     nlp,
     objective=fx,
     dual_feas=norm(dual),
@@ -143,7 +144,6 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     multipliers_L=zeros(T, nvar),
     multipliers_U=zeros(T, nvar),
     elapsed_time=elapsed_time,
-    solution=x,
     iter=iter
   )
 end

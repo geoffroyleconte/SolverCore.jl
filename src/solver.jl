@@ -12,7 +12,7 @@ A solver must have three members:
 abstract type AbstractSolver{T} end
 
 function Base.show(io :: IO, solver :: AbstractSolver)
-    show(io, "Solver $(typeof(solver))")
+  println(io, "Solver $(typeof(solver))")
 end
 
 """
@@ -44,8 +44,3 @@ function parameters(::Type{AbstractSolver{T}}) where T end
 
 parameters(::Type{S}) where S <: AbstractSolver = parameters(S{Float64})
 parameters(solver :: AbstractSolver) = parameters(typeof(solver))
-
-# To be removed in the future
-
-include("optsolver.jl")
-# include("linearsolver.jl")
