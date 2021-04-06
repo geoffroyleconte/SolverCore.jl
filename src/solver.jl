@@ -1,4 +1,4 @@
-export AbstractSolver, solve!, parameters
+export AbstractSolver, solve!, parameters, are_valid_parameters
 
 """
     AbstractSolver
@@ -43,4 +43,13 @@ Each key of `named_tuple` is the name of a parameter, and its value is a NamedTu
 function parameters(::Type{AbstractSolver{T}}) where T end
 
 parameters(::Type{S}) where S <: AbstractSolver = parameters(S{Float64})
-parameters(solver :: AbstractSolver) = parameters(typeof(solver))
+parameters(::S) where S <: AbstractSolver = parameters(S)
+
+"""
+    are_valid_parameters(solver, args...)
+
+Return whether the parameters given in `args` are valid for `solver`.
+The order of the parameters must be the same as in `parameters(solver)`.
+"""
+function are_valid_parameters(::Type{AbstractSolver}, args...) end
+are_valid_parameters(::S) where S <: AbstractSolver = are_valid_parameters(S)

@@ -4,15 +4,20 @@ mutable struct DummySolver{T} <: AbstractOptSolver{T}
   workspace
 end
 
+SolverCore.problem_types_handled(::Type{DummySolver}) = [:unc, :bnd, :equ, :bndequ, :ineq, :genopt]
+
 function SolverCore.parameters(::Type{DummySolver{T}}) where T
   (
     α = (default=T(1e-2), type=:log, min=√√eps(T), max=one(T) / 2),
+    β = (default=T(1e-2), type=:log, min=√√eps(T), max=one(T) / 2),
     δ = (default=√eps(T), type=:log, min=√eps(T), max=√√√eps(T)),
     reboot_y = (default=false, type=:bool),
   )
 end
 
-# function for validating given parameters. Instead of using constraints.
+function SolverCore.are_valid_parameters(::Type{DummySolver}, α, β, δ, reboot_y)
+  return α + β ≤ 0.5
+end
 
 function DummySolver(::Type{T}, meta :: AbstractNLPModelMeta; kwargs...) where T
   nvar, ncon = meta.nvar, meta.ncon
@@ -50,6 +55,7 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     solver.params[k] = v
   end
   α = solver.params[:α]
+  β = solver.params[:β]
   δ = solver.params[:δ]
   reboot_y = solver.params[:reboot_y]
 
@@ -96,7 +102,7 @@ function SolverCore.solve!(solver::DummySolver{T}, nlp :: AbstractNLPModel;
     ft = obj(nlp, xt)
     slope = -dot(Δx, Hxy, Δx) - norm(AΔx)^2 / δ
     t = 1.0
-    while !(ϕ(ft, ct, y) ≤ ϕx + α * t * slope)
+    while !(ϕ(ft, ct, y) ≤ ϕx + (α + β) * t * slope)
       t /= 2
       xt .= x + t * Δx
       if ncon > 0
