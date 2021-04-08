@@ -2,7 +2,7 @@
 using SolverCore
 
 # stdlib
-using Random, Test
+using Logging, Random, Test
 
 include("solver.jl")
 include("output.jl")

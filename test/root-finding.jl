@@ -143,7 +143,7 @@
 
   # Tuning
   Random.seed!(0)
-  grid = with_logger(NullLogger) do
+  grid = with_logger(NullLogger()) do
     grid_search_tune(
       Bissection,
       rfp_problems,
