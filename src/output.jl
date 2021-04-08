@@ -1,11 +1,11 @@
 export AbstractSolverOutput
 
 """
-    AbstractSolverOutput
+    AbstractSolverOutput{T}
 
 Base type for output of JSO-compliant solvers.
 An output must have at least the following:
-- `status :: Bool`
+- `status :: Symbol`
 - `solution`
 """
 abstract type AbstractSolverOutput{T} end

@@ -1,4 +1,4 @@
-export AbstractSolver, solve!, parameters, are_valid_parameters
+export AbstractSolver, solve!
 
 """
     AbstractSolver
@@ -20,36 +20,4 @@ end
 
 Solve `problem` with `solver`.
 """
-function solve!(::AbstractSolver, ::Any) end
-
-"""
-    named_tuple = parameters(solver)
-    named_tuple = parameters(SolverType)
-    named_tuple = parameters(SolverType{T})
-
-Return the parameters of a `solver`, or of the type `SolverType`.
-You can specify the type `T` of the `SolverType`.
-The returned structure is a nested NamedTuple.
-Each key of `named_tuple` is the name of a parameter, and its value is a NamedTuple containing
-- `default`: The default value of the parameter.
-- `type`: The type of the parameter, which can any of:
-  - `:real`: A continuous value within a range
-  - `:log`: A positive continuous value that should be explored logarithmically (like 10⁻², 10⁻¹, 1, 10).
-  - `:int`: Integer value.
-  - `:bool`: Boolean value.
-- `min`: Minimum value (may not be included for some parameter types).
-- `max`: Maximum value.
-"""
-function parameters(::Type{AbstractSolver{T}}) where T end
-
-parameters(::Type{S}) where S <: AbstractSolver = parameters(S{Float64})
-parameters(::S) where S <: AbstractSolver = parameters(S)
-
-"""
-    are_valid_parameters(solver, args...)
-
-Return whether the parameters given in `args` are valid for `solver`.
-The order of the parameters must be the same as in `parameters(solver)`.
-"""
-function are_valid_parameters(::Type{AbstractSolver}, args...) end
-are_valid_parameters(::S) where S <: AbstractSolver = are_valid_parameters(S)
+function solve! end

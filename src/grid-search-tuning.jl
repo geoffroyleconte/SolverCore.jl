@@ -1,5 +1,8 @@
 export grid_search_tune
 
+# ISSUE: For grid_search_tune to work, we need to define `reset!`
+function reset! end
+
 """
     solver, results = grid_search_tune(SolverType, problems; kwargs...)
 
@@ -31,7 +34,6 @@ function grid_search_tune(
   success = o -> o.status == :first_order,
   costs = [
     (o -> o.elapsed_time, 100.0),
-    (o -> o.counters.neval_obj + o.counters.neval_cons, 1000),
     (o -> !success(o), 1),
   ],
   grid_length = 10,
@@ -40,15 +42,15 @@ function grid_search_tune(
 ) where Solver <: AbstractSolver
 
   solver_params = parameters(Solver)
-  params = Dict()
+  params = OrderedDict()
   for (k,v) in pairs(solver_params)
-    if v[:type] == :real
+    if v[:type] <: AbstractFloat && (!haskey(v, :scale) || v[:scale] == :linear)
       params[k] = LinRange(v[:min], v[:max], grid_length)
-    elseif v[:type] == :log
+    elseif v[:type] <: AbstractFloat && v[:scale] == :log
       params[k] = exp.(LinRange(log(v[:min]), log(v[:max]), grid_length))
-    elseif v[:type] == :bool
+    elseif v[:type] == Bool
       params[k] = (false, true)
-    elseif v[:type] == :int
+    elseif v[:type] <: Integer
       params[k] = v[:min]:v[:max]
     end
   end
@@ -57,24 +59,25 @@ function grid_search_tune(
   end
 
   # Precompiling
-  nlp = first(problems)
+  problem = first(problems)
   try
-    solver = Solver(Val(:nosolve), nlp)
+    solver = Solver(problem)
     output = with_logger(NullLogger()) do
-      solve!(solver, nlp)
+      solve!(solver, problem)
     end
   finally
-    finalize(nlp)
+    finalize(problem)
   end
 
   cost(θ) = begin
     total_cost = [zero(x[2]) for x in costs]
-    for nlp in problems
-      reset!(nlp)
+    for problem in problems
+      reset!(problem)
       try
-        solver = Solver(Val(:nosolve), nlp)
+        solver = Solver(problem)
+        P = (k => θi for (k,θi) in zip(keys(solver_params), θ))
         output = with_logger(NullLogger()) do
-          solve!(solver, nlp; (k => θi for (k,θi) in zip(keys(solver_params), θ))...)
+          solve!(solver, problem; P...)
         end
         for (i, c) in enumerate(costs)
           if success(output)
@@ -87,9 +90,9 @@ function grid_search_tune(
         for (i, c) in enumerate(costs)
           total_cost[i] += c[2]
         end
-        @show ex
+        @error ex
       finally
-        finalize(nlp)
+        finalize(problem)
       end
     end
     total_cost

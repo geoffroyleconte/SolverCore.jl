@@ -1,13 +1,10 @@
 # This package
 using SolverCore
 
-# Auxiliary packages
-using ADNLPModels, NLPModels
-
 # stdlib
-using LinearAlgebra, Logging, Test
+using Random, Test
 
-include("dummy_solver.jl")
+include("solver.jl")
+include("output.jl")
 
-include("test_logging.jl")
-include("test_stats.jl")
+include("root-finding.jl")
